@@ -1,0 +1,50 @@
+{
+    "version": "1.0.0",
+    "settings": {},
+    "network_data": {},
+    "tools_data": {
+        "available": [
+            "EA",
+            "nmap",
+            "sqlmap",
+            "metasploit",
+            "hydra",
+            "john",
+            "aircrack-ng",
+            "wpscan",
+            "gobuster",
+            "hashcat",
+            "nikto",
+            "dirb",
+            "wireshark",
+            "tshark",
+            "ettercap",
+            "dnsenum",
+            "theHarvester",
+            "sherlock",
+            "recon-ng",
+            "maltego",
+            "metagoofil",
+            "spiderfoot",
+            "skipfish",
+            "wapiti",
+            "whatweb",
+            "joomscan",
+            "droopescan",
+            "commix",
+            "xsstrike",
+            "sslyze",
+            "testssl.sh",
+            "lynis",
+            "chkrootkit",
+            "rkhunter"
+        ],
+        "installed": [
+            "nmap",
+            "sqlmap",
+            "john",
+            "wpscan"
+        ]
+    },
+    "blockchain_data": {}
+}
