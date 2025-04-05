@@ -1,0 +1,7 @@
+{
+    "version": "1.0.0",
+    "default_settings": {
+        "log_level": "INFO",
+        "backup_enabled": true
+    }
+}
