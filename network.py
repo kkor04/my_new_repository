@@ -156,45 +156,11 @@ class NetworkManager:
     def _get_mac_address(self, interface: str) -> str:
         """Try to get MAC address for an interface (platform independent)"""
         try:
-            if os.name == 'posix':
-                if interface == 'primary':
-                    # Try to find the default route interface
-                    result = subprocess.run(
-                        ['ip', 'route', 'show', 'default'],
-                        capture_output=True,
-                        text=True
-                    )
-                    if result.returncode == 0:
-                        dev_match = re.search(r'dev (\w+)', result.stdout)
-                        if dev_match:
-                            interface = dev_match.group(1)
-
-                # Try different methods to get MAC
-                for path in [
-                    f'/sys/class/net/{interface}/address',
-                    f'/sys/class/net/{interface}/device/address'
-                ]:
-                    if os.path.exists(path):
-                        with open(path, 'r') as f:
-                            return f.read().strip()
-
-                # Fallback to ifconfig/ip commands
-                for cmd in [['ifconfig', interface], ['ip', 'link', 'show', interface]]:
-                    try:
-                        result = subprocess.run(
-                            cmd,
-                            capture_output=True,
-                            text=True
-                        )
-                        if result.returncode == 0:
-                            mac_match = re.search(r'(\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2})', result.stdout)
-                            if mac_match:
-                                return mac_match.group(1)
-                    except:
-                        continue
+            if os.name == 'posix' and os.access(f'/sys/class/net/{interface}/address', os.R_OK):
+                with open(f'/sys/class/net/{interface}/address', 'r') as f:
+                    return f.read().strip()
         except Exception:
             pass
-
         return 'unknown'
 
     def scan_network(self, target_range: str = "192.168.1.0/24", timeout: int = 1,

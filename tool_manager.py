@@ -27,15 +27,9 @@ class NetworkManager:
 
         for interface in netifaces.interfaces():
             try:
-                addrs = netifaces.ifaddresses(interface)
-                info['interfaces'][interface] = {
-                    'mac': addrs.get(netifaces.AF_LINK, [{}])[0].get('addr'),
-                    'ipv4': addrs.get(netifaces.AF_INET, [{}])[0].get('addr'),
-                    'ipv6': addrs.get(netifaces.AF_INET6, [{}])[0].get('addr'),
-                    'netmask': addrs.get(netifaces.AF_INET, [{}])[0].get('netmask')
-                }
+                info['interfaces'][interface] = netifaces.ifaddresses(interface)
             except ValueError as e:
-                self.log.log_error(f"Error getting info for {interface}: {str(e)}")
+                self.log.log_error(f"Error retrieving interface info: {str(e)}")
 
         return info
 
@@ -53,8 +47,8 @@ class NetworkManager:
                     s.settimeout(1)
                     result = s.connect_ex((host, port))
                     results[port] = "open" if result == 0 else "closed"
-            except socket.error:
-                results[port] = "error"
+            except socket.error as e:
+                self.log.log_error(f"Error scanning port {port}: {str(e)}")
         return results
 
     def check_connection(self, host: str, port: int, timeout: int = 3) -> bool:

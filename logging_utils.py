@@ -30,8 +30,7 @@ class Log:
     def log_error_to_console(message: str, color: str = "red"):
         print(f"\033[91m[ERROR] {message}\033[0m")
 
-pip install libffi
-@staticmethod
+    @staticmethod
     def log_warning(message: str, color: str = "yellow"):
         print(f"\033[93m[WARNING] {message}\033[0m")
 
@@ -41,6 +40,7 @@ class ErrorHandler:
     def __init__(self):
         self.error_db = self._load_error_db()
         self.fix_attempted = False
+        self.log = log  # Fixed undefined reference
 
     def _load_error_db(self, filename: str = 'error_db.json') -> Dict:
         """Load error database with built-in fallback"""
@@ -371,7 +371,9 @@ class ErrorHandler:
             os.execv(sys.executable, ['python'] + sys.argv)
         return False
 
-LOG_DIR = "logs"
+LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
+
 LOG_FILES = {
     "program": os.path.join(LOG_DIR, "program.log"),
     "system": os.path.join(LOG_DIR, "system.log"),

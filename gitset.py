@@ -1,7 +1,9 @@
 import os
 import subprocess
 
-def initialize_git_repository(repo_name, directory=".", user_name=None, user_email=None, branch_name="master"):
+def initialize_git_repository(repo_name, directory=None, user_name=None, user_email=None, branch_name="master"):
+    # Dynamically determine the directory if not provided
+    directory = directory or os.path.dirname(os.path.abspath(__file__))
     # Set the repository path
     repo_path = os.path.join(directory, repo_name)
     # Create the directory for the repository

@@ -10,11 +10,12 @@ import time
 from typing import List, Dict, Optional, Union
 from logging_utils import log, ErrorHandler
 import tool_manager
-import backup
+# Removed unused and unresolved import "backup"
 import crypto_quantum_secure
+from watchdog_utils import FileMonitor  # Added import for file monitoring
 
-HASH_FILE = "hashes.json"
-BACKUP_DIR = "backup"
+BACKUP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backup")
+HASH_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "hashes.json")
 DEFAULT_FILES = [".py", ".json"]
 EXCLUDE_FILES = [HASH_FILE, "pentest_toolkit.log", ".git", "__pycache__", "backup"]
 
@@ -22,12 +23,15 @@ class FileManager:
     def __init__(self):
         self.error_handler = ErrorHandler()
         os.makedirs(BACKUP_DIR, exist_ok=True)
+        self.file_monitor = FileMonitor(directory=os.getcwd())  # Initialize file monitor
+        self.file_monitor.start()  # Start monitoring files
 
     def sanitize_filename(self, filename: str) -> str:
         return os.path.basename(filename)
 
     def backup_files(self) -> bool:
         try:
+            self.file_monitor.stop()  # Temporarily stop monitoring during backup
             timestamp = int(time.time())
             backup_path = os.path.join(BACKUP_DIR, f"backup_{timestamp}.zip")
 
@@ -47,41 +51,18 @@ class FileManager:
                     raise zipfile.BadZipFile("Backup verification failed")
 
             log.log_system(f"Backup complete: {backup_path}", "green")
+            self.file_monitor.start()  # Restart monitoring after backup
             return True
         except Exception as e:
             self.error_handler.handle_error(e, "During backup")
             return False
 
-    def generate_hashes(self) -> bool:
-        try:
-            files_to_hash = [
-                os.path.join(root, file)
-                for root, _, files in os.walk('.')
-                for file in files
-                if file not in EXCLUDE_FILES
-            ]
-
-            hashes = {}
-            for filepath in files_to_hash:
-                file_hash = self.calculate_file_hash(filepath)
-                if file_hash:
-                    hashes[filepath] = file_hash
-                    log.log_info(f"Hashed: {filepath}")
-
-            with open(HASH_FILE, 'w') as f:
-                json.dump(hashes, f, indent=4)
-
-            log.log_system("File hashes generated", "green")
-            return True
-        except Exception as e:
-            self.error_handler.handle_error(e, "During hash generation")
-            return False
-
     def check_integrity(self, specific_file: Optional[str] = None) -> bool:
+        """Check file integrity using hashes."""
         try:
             if not os.path.exists(HASH_FILE):
                 log.log_error("Hash file missing - regenerating", color="yellow")
-                return generate_hashes()
+                return False
 
             with open(HASH_FILE, 'r') as f:
                 reference_hashes = json.load(f)
@@ -106,10 +87,7 @@ class FileManager:
                     all_valid = False
 
             if not all_valid:
-                log.log_error("Integrity check failed - regenerating hashes", color="red")
-                if generate_hashes():
-                    log.log_info("Hashes regenerated successfully", color="green")
-                    return check_integrity(specific_file)
+                log.log_error("Integrity check failed", color="red")
                 return False
 
             log.log_info("All files validated successfully", color="green")
@@ -138,8 +116,10 @@ class FileManager:
 
     def restore_from_backup(self, filename: str) -> bool:
         try:
+            self.file_monitor.stop()  # Temporarily stop monitoring during restore
             if not os.path.exists(BACKUP_DIR):
                 log.log_error("No backup directory found", color="red")
+                self.file_monitor.start()  # Restart monitoring after restore
                 return False
 
             backups = sorted(
@@ -150,6 +130,7 @@ class FileManager:
 
             if not backups:
                 log.log_error("No backups available", color="red")
+                self.file_monitor.start()  # Restart monitoring after restore
                 return False
 
             restored = False
@@ -168,22 +149,15 @@ class FileManager:
 
             if not restored:
                 log.log_error(f"File not found in any backup: {filename}", color="red")
+                self.file_monitor.start()  # Restart monitoring after restore
                 return self._regenerate_default_file(filename)
 
+            self.file_monitor.start()  # Restart monitoring after restore
             return True
         except Exception as e:
             self.error_handler.handle_error(e, f"During restore of {filename}")
+            self.file_monitor.start()  # Restart monitoring after restore
             return False
-
-    def validate_file_hash(self, file_path: str, reference_hash: str) -> bool:
-        calculated_hash = self.calculate_file_hash(file_path)
-        if calculated_hash == reference_hash:
-            return True
-
-        log.log_error(f"Hash mismatch for {file_path}", color="red")
-        if self.restore_from_backup(file_path):
-            return self.validate_file_hash(file_path, reference_hash)
-        return False
 
     def _regenerate_default_file(self, filename: str) -> bool:
         try:
@@ -209,26 +183,14 @@ file_manager = FileManager()
 def backup_files() -> bool:
     return file_manager.backup_files()
 
-def generate_hashes() -> bool:
-    return file_manager.generate_hashes()
-
 def check_integrity(specific_file: Optional[str] = None) -> bool:
     return file_manager.check_integrity(specific_file)
 
 def calculate_file_hash(file_path: str) -> Optional[str]:
     return file_manager.calculate_file_hash(file_path)
 
-def validate_file_hash(file_path: str, reference_hash: str) -> bool:
-    return file_manager.validate_file_hash(file_path, reference_hash)
-
 def restore_from_backup(filename: str) -> bool:
     return file_manager.restore_from_backup(filename)
 
 def sanitize_filename(filename: str) -> str:
     return file_manager.sanitize_filename(filename)
-
-# NOTE: Missing import error_handling
-
-# NOTE: Missing import error_handling
-
-# NOTE: Missing import error_handling

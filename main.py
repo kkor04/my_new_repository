@@ -9,14 +9,16 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from typing import NoReturn, Dict, Any
 
-from logging_utils import log, ErrorHandler  # Update import to include ErrorHandler
+from logging_utils import log, ErrorHandler  # Ensure ErrorHandler is defined in logging_utils
 from help_system import HelpSystem
 from command_db import CommandDatabase
-from file_utils import backup_files, check_integrity, generate_hashes
+from file_utils import backup_files, check_integrity
+from hash_utils import generate_hashes_for_directory as generate_hashes
 from network import NetworkManager
 from menu import MainMenu
 from version_utils import check_version, update_version
-from file_monitor import start_file_monitoring  # Remove try block for this import
+from watchdog_utils import FileMonitor  # Added import for file monitoring
+
 from installer import PackageInstaller
 from tool_manager import ToolManager
 from hash_utils import generate_hashes_for_workspace
@@ -35,6 +37,7 @@ class SystemInitializer:
         self.command_db = CommandDatabase()
         self.help_system = HelpSystem(self.command_db)
         self.monitor = None
+        self.file_monitor = FileMonitor(directory=os.getcwd())  # Initialize file monitor
 
         # Set up signal handlers
         signal.signal(signal.SIGINT, self.signal_handler)
@@ -54,6 +57,8 @@ class SystemInitializer:
     def cleanup(self) -> None:
         """Clean up resources before shutdown"""
         try:
+            if self.file_monitor:
+                self.file_monitor.stop()  # Stop file monitoring
             if self.monitor:
                 self.monitor.stop()
                 self.monitor.join()
@@ -158,6 +163,11 @@ class SystemInitializer:
                     results[name] = False
                     self.error_handler.handle_error(e, f"During {name}")
 
+        try:
+            self.file_monitor.start()  # Start file monitoring
+        except Exception as e:
+            log.log_error(f"Failed to start file monitoring: {str(e)}")
+
         if all(results.values()):
             log.log_system("All systems initialized successfully")
             return True
@@ -233,8 +243,8 @@ def main():
     try:
         log.log_info("Starting the program...", color="green")
         
-        # Generate hashes for the workspace
-        workspace_dir = "/data/data/com.termux/files/home/kprog/Start"
+        # Dynamically determine the workspace directory
+        workspace_dir = os.path.dirname(os.path.abspath(__file__))
         hash_output_file = os.path.join(workspace_dir, "workspace_hashes.json")
         log.log_info("Generating hashes for the workspace...")
         generate_hashes_for_workspace(workspace_dir, hash_output_file)
@@ -252,6 +262,10 @@ def main():
         menu.show()
     except Exception as e:
         log.log_error(f"An error occurred: {str(e)}", color="red")
+        traceback.print_exc()
 
 if __name__ == "__main__":
+    if os.geteuid() == 0:
+        log.log_error("Do not run this script as root or with sudo.", color="red")
+        sys.exit(1)
     main()

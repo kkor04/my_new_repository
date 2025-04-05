@@ -16,7 +16,7 @@ class BlockchainAuditManager:
         self.error_handler = ErrorHandler()
         self.w3 = self._init_web3()
         self.contract = self._load_contract()
-        self.cache_file = Path("blockchain_cache.json")
+        self.cache_file = Path(os.path.join(os.path.dirname(os.path.abspath(__file__)), "blockchain_cache.json"))
         self.local_cache = self._load_cache()
         self.account = self._setup_account()
 
@@ -32,7 +32,7 @@ class BlockchainAuditManager:
         for provider_url in providers:
             try:
                 w3 = Web3(HTTPProvider(provider_url))
-                if w3.isConnected():
+                if w3.is_connected():  # Fixed method name
                     log.log_info(f"Connected to blockchain provider: {provider_url}")
                     # Add middleware for POA networks if needed
                     if "poa" in provider_url:

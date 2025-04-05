@@ -8,8 +8,6 @@ import importlib.util
 from typing import List, Dict
 from logging_utils import log
 
-
-
 import tool_manager
 
 DEPENDENCIES = {
@@ -22,8 +20,7 @@ DEPENDENCIES = {
 }
 
 class PackageInstaller:
-    def __init__(self):    "kyber_py": {"version": "1.0.0", "install_command": "pip install kyber_py"},
-
+    def __init__(self):
         self.available_managers = self._detect_managers()
 
     def verify_dependencies(self) -> bool:
@@ -34,7 +31,6 @@ class PackageInstaller:
                 log.log_info(f"Installing {name}...")
                 if not self._install_dependency(name, dep):
                     all_satisfied = False
-
         return all_satisfied
 
     def _detect_managers(self) -> List[str]:
@@ -49,7 +45,7 @@ class PackageInstaller:
                     check=True
                 )
                 managers.append(manager)
-            except:
+            except subprocess.CalledProcessError:
                 continue
         return managers
 
@@ -73,10 +69,9 @@ class PackageInstaller:
     def _install_dependency(self, name: str, dep: Dict) -> bool:
         """Install dependency using specified method"""
         try:
-            cmd = dep["install_command"]
+            cmd = dep["install_command"].split()
             result = subprocess.run(
                 cmd,
-                shell=True,
                 check=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

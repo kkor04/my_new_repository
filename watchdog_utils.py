@@ -1,51 +1,47 @@
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import time
-from typing import Callable
+from logging_utils import log
 
-class WatchdogHandler(FileSystemEventHandler):
-    def __init__(self, callback: Callable[[str, str], None]):
-        self.callback = callback
-
+class FileMonitorHandler(FileSystemEventHandler):
+    """Custom handler for file system events."""
     def on_modified(self, event):
         if not event.is_directory:
-            self.callback(event.src_path, "modified")
+            log.log_info(f"File modified: {event.src_path}")
 
     def on_created(self, event):
         if not event.is_directory:
-            self.callback(event.src_path, "created")
+            log.log_info(f"File created: {event.src_path}")
 
     def on_deleted(self, event):
         if not event.is_directory:
-            self.callback(event.src_path, "deleted")
+            log.log_info(f"File deleted: {event.src_path}")
 
-class WatchdogUtils:
-    def __init__(self, path: str, callback: Callable[[str, str], None]):
-        self.path = path
-        self.callback = callback
+class FileMonitor:
+    """File monitoring utility using watchdog."""
+    def __init__(self, directory: str):
+        self.directory = directory
         self.observer = Observer()
 
     def start(self):
-        event_handler = WatchdogHandler(self.callback)
-        self.observer.schedule(event_handler, self.path, recursive=True)
+        """Start monitoring the directory."""
+        event_handler = FileMonitorHandler()
+        self.observer.schedule(event_handler, self.directory, recursive=True)
         self.observer.start()
-        print(f"Started monitoring: {self.path}")
+        log.log_info(f"Started monitoring directory: {self.directory}")
 
     def stop(self):
+        """Stop monitoring the directory."""
         self.observer.stop()
         self.observer.join()
-        print(f"Stopped monitoring: {self.path}")
+        log.log_info(f"Stopped monitoring directory: {self.directory}")
 
 # Example usage
 if __name__ == "__main__":
-    def log_change(file_path, change_type):
-        print(f"File {file_path} was {change_type}")
-
-    path_to_watch = "."
-    watchdog = WatchdogUtils(path_to_watch, log_change)
+    monitor = FileMonitor(directory=".")
     try:
-        watchdog.start()
+        monitor.start()
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        watchdog.stop()
+        monitor.stop()
